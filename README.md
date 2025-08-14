@@ -7,7 +7,9 @@ Setelah berhasil clone dari github, jalankan command
 
 Isikan env tersebut, dari serviceAccountKey.json dari firebase
 
-Step by step mendapatkan serviceAccountKey.json
+Sebelum itu, aktifkan terlebih dahulu Firebase Auth pada proyek anda
+
+Jika sudah mengaktifkan Firebase Auth, Lakukan step by step berikut untuk mendapatkan serviceAccountKey.json
 
 - Masuk project pada firebase
 - Masuk ke project setting
