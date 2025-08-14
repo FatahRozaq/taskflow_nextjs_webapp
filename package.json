@@ -23,6 +23,7 @@
     "autoprefixer": "^10.4.20",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "firebase": "^12.1.0",
     "firebase-admin": "^13.4.0",
     "flatpickr": "^4.6.13",

@@ -31,13 +31,42 @@ interface Task {
   } | null;
 }
 
-type StatusFilter =
-  | "active"
-  | "all"
-  | TaskStatus;
+type StatusFilter = "active" | "all" | TaskStatus;
 
 type SortBy = "due_date" | "created_at";
 type SortDir = "asc" | "desc";
+
+function formatDateFromDB(dateInput: string | null | undefined): string {
+  if (typeof dateInput !== 'string' || !dateInput.trim()) return 'No due date';
+  const s = dateInput.trim();
+
+  const match = s.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?/
+  );
+  if (!match) return s;
+
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  const hour24 = match[4] ? parseInt(match[4], 10) : 0;
+  const minute = match[5] ? parseInt(match[5], 10) : 0;
+
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  const hour12 = hour24 % 12 || 12;
+
+  const t = [0,3,2,5,0,3,5,1,4,6,2,4];
+  let y = year;
+  if (month < 3) y -= 1;
+  const dow = (y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[month - 1] + day) % 7;
+
+  const weekdays = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const hh = String(hour12).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
+
+  return `${weekdays[dow]}, ${months[month - 1]} ${day}, ${year}, ${hh}:${mm} ${ampm}`;
+}
 
 export default function TasksPage() {
   const { user, loading } = useAuth();
@@ -174,8 +203,20 @@ export default function TasksPage() {
     setEditStatus(task.status);
     setEditCategoryId(task.category?.category_id ?? "");
     setEditPriority((task.priority as TaskPriority) || "Medium");
-    const d = task.due_date ? new Date(task.due_date) : null;
-    setEditDueDate(d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : "");
+    const localIsoString = task.due_date
+      ? (() => {
+          const s = task.due_date.trim();
+          const match = s.match(
+            /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/
+          );
+          if (!match) return "";
+          const [ , year, month, day, hour = "00", minute = "00" ] = match;
+          return `${year}-${month}-${day}T${hour}:${minute}`;
+        })()
+      : "";
+
+    setEditDueDate(localIsoString);
+
   };
 
   const closeEditModal = () => {
@@ -263,33 +304,33 @@ export default function TasksPage() {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <main className="p-3 sm:p-6">
+    <main className="p-3 sm:p-6 dark:bg-gray-900 min-h-screen">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">Task List</h1>
+        <h1 className="text-xl sm:text-2xl font-bold dark:text-gray-100">Task List</h1>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <AddTask onTaskAdded={fetchTasks} />
-          
+
           <input
             type="text"
             placeholder="Search task..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border rounded-xl px-3 py-2 w-full sm:w-48 lg:w-56 outline-none focus:border-purple-600"
+            className="border rounded-xl px-3 py-2 w-full sm:w-48 lg:w-56 outline-none focus:border-purple-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-400 dark:focus:border-purple-500"
           />
 
           <div className="flex gap-2">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortBy)}
-              className="border rounded-xl px-3 py-2 outline-none focus:border-purple-600 flex-1 sm:flex-none"
+              className="border rounded-xl px-3 py-2 outline-none focus:border-purple-600 flex-1 sm:flex-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:focus:border-purple-500"
             >
               <option value="due_date">Sort by Due Date</option>
               <option value="created_at">Sort by Created At</option>
@@ -297,7 +338,7 @@ export default function TasksPage() {
             <select
               value={sortDir}
               onChange={(e) => setSortDir(e.target.value as SortDir)}
-              className="border rounded-xl px-3 py-2 outline-none focus:border-purple-600 flex-1 sm:flex-none"
+              className="border rounded-xl px-3 py-2 outline-none focus:border-purple-600 flex-1 sm:flex-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:focus:border-purple-500"
             >
               <option value="asc">Asc</option>
               <option value="desc">Desc</option>
@@ -307,19 +348,19 @@ export default function TasksPage() {
           <div className="relative">
             <button
               onClick={() => setFiltersOpen((s) => !s)}
-              className="border rounded-xl px-3 py-2 hover:bg-gray-50 w-full sm:w-auto"
+              className="border rounded-xl px-3 py-2 hover:bg-gray-50 w-full sm:w-auto dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Filters
             </button>
             {filtersOpen && (
-              <div className="absolute right-0 sm:right-auto sm:-translate-x-full mt-2 w-full sm:w-80 bg-white border rounded-xl shadow-lg p-3 z-10">
+              <div className="absolute right-0 sm:right-auto sm:-translate-x-full mt-2 w-full sm:w-80 bg-white border rounded-xl shadow-lg p-3 z-101 dark:bg-gray-800 dark:border-gray-700">
                 <div className="space-y-3">
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Status</label>
+                    <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Status</label>
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                      className="w-full border rounded-xl px-3 py-2 outline-none focus:border-purple-600"
+                      className="w-full border rounded-xl px-3 py-2 outline-none focus:border-purple-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="active">Active (exclude Done)</option>
                       <option value="all">All (include Done)</option>
@@ -331,13 +372,13 @@ export default function TasksPage() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Category</label>
+                    <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Category</label>
                     <select
                       value={categoryFilter}
                       onChange={(e) =>
                         setCategoryFilter(e.target.value === "all" ? "all" : Number(e.target.value))
                       }
-                      className="w-full border rounded-xl px-3 py-2 outline-none focus:border-purple-600"
+                      className="w-full border rounded-xl px-3 py-2 outline-none focus:border-purple-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="all">All Categories</option>
                       {categories.map((c) => (
@@ -349,7 +390,7 @@ export default function TasksPage() {
                   </div>
 
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Priority</label>
+                    <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Priority</label>
                     <select
                       value={priorityFilter}
                       onChange={(e) =>
@@ -357,7 +398,7 @@ export default function TasksPage() {
                           e.target.value === "all" ? "all" : (e.target.value as TaskPriority)
                         )
                       }
-                      className="w-full border rounded-xl px-3 py-2 outline-none focus:border-purple-600"
+                      className="w-full border rounded-xl px-3 py-2 outline-none focus:border-purple-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                     >
                       <option value="all">All Priorities</option>
                       <option value="Low">Low</option>
@@ -387,7 +428,7 @@ export default function TasksPage() {
                 setPriorityFilter("all");
                 setSearch("");
               }}
-              className="text-sm px-3 py-2 border rounded-xl hover:bg-gray-50 w-full sm:w-auto"
+              className="text-sm px-3 py-2 border rounded-xl hover:bg-gray-50 w-full sm:w-auto dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               Reset
             </button>
@@ -397,11 +438,11 @@ export default function TasksPage() {
 
       <div className="flex flex-wrap gap-2 mb-4">
         {statusFilter !== "active" && (
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
             Status: {statusFilter}
             <button
               onClick={() => clearFilter("status")}
-              className="ml-1 rounded-full hover:bg-blue-200 px-2"
+              className="ml-1 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 px-2"
             >
               ×
             </button>
@@ -410,7 +451,7 @@ export default function TasksPage() {
 
         {categoryFilter !== "all" && (
           <span
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm text-gray-900"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm text-gray-900 dark:text-gray-100"
             style={categoryStyle(categories.find((c) => c.category_id === categoryFilter)?.color)}
           >
             Category: {categories.find((c) => c.category_id === categoryFilter)?.name || "Unknown"}
@@ -427,10 +468,10 @@ export default function TasksPage() {
           <span
             className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
               priorityFilter === "High"
-                ? "bg-red-100 text-red-800"
+                ? "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
                 : priorityFilter === "Medium"
-                ? "bg-amber-100 text-amber-800"
-                : "bg-gray-100 text-gray-800"
+                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
             }`}
           >
             Priority: {priorityFilter}
@@ -441,11 +482,11 @@ export default function TasksPage() {
         )}
 
         {search && (
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
             Search: "{search}"
             <button
               onClick={() => setSearch("")}
-              className="ml-1 rounded-full px-2 hover:bg-purple-200"
+              className="ml-1 rounded-full px-2 hover:bg-purple-200 dark:hover:bg-purple-800/60"
             >
               ×
             </button>
@@ -454,15 +495,15 @@ export default function TasksPage() {
       </div>
 
       {loadingTasks ? (
-        <div>Loading tasks...</div>
+        <div className="dark:text-gray-400">Loading tasks...</div>
       ) : visibleTasks.length === 0 ? (
-        <p>No tasks available.</p>
+        <p className="dark:text-gray-400">No tasks available.</p>
       ) : (
         <ul className="space-y-3">
           {visibleTasks.map((task) => (
             <li
               key={task.id}
-              className="p-3 sm:p-4 border rounded-lg shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3"
+              className="p-3 sm:p-4 border rounded-lg shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 dark:bg-gray-800 dark:border-gray-700"
             >
               <div className="flex items-start gap-3 flex-1">
                 <input
@@ -476,12 +517,12 @@ export default function TasksPage() {
                   title={task.status === "Done" ? "Task already done" : "Mark as done"}
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-base sm:text-lg break-words">{task.title}</h2>
+                  <h2 className="font-semibold text-base sm:text-lg break-words dark:text-gray-100">{task.title}</h2>
 
                   {task.category && (
                     <div className="mt-1">
                       <span
-                        className="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                        className="inline-block px-2 py-0.5 rounded-full text-xs font-medium text-black/80 dark:text-white/90"
                         style={categoryStyle(task.category.color)}
                         title={task.category.name}
                       >
@@ -491,17 +532,17 @@ export default function TasksPage() {
                   )}
 
                   {task.description && (
-                    <p className="text-sm text-gray-600 mt-1 break-words">{task.description}</p>
+                    <p className="text-sm text-gray-600 mt-1 break-words dark:text-gray-400">{task.description}</p>
                   )}
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         task.status === "Done"
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/70 dark:text-green-300"
                           : task.status === "Todo" || task.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-blue-100 text-blue-700"
+                          ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/70 dark:text-yellow-300"
+                          : "bg-blue-100 text-blue-700 dark:bg-blue-900/70 dark:text-blue-300"
                       }`}
                     >
                       {task.status}
@@ -511,25 +552,21 @@ export default function TasksPage() {
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                           task.priority === "High"
-                            ? "bg-red-100 text-red-700"
+                            ? "bg-red-100 text-red-700 dark:bg-red-900/70 dark:text-red-300"
                             : task.priority === "Medium"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-gray-100 text-gray-700"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/70 dark:text-amber-300"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                         }`}
                       >
                         {task.priority}
                       </span>
                     )}
 
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       {task.due_date
-                        ? `Due: ${new Date(task.due_date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric', 
-                            month: 'long',
-                            day: 'numeric'
-                          })}`
-                        : "No due date"}
+                      ? `Due: ${formatDateFromDB(task.due_date)}`
+                      : "No due date"}
+
                     </span>
                   </div>
                 </div>
@@ -556,15 +593,15 @@ export default function TasksPage() {
 
       {editTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-101 p-4">
-          <div className="bg-white p-4 sm:p-6 rounded-xl w-full max-w-md shadow-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg sm:text-xl font-bold mb-4">Edit Task</h2>
+          <div className="bg-white p-4 sm:p-6 rounded-xl w-full max-w-md shadow-lg max-h-[90vh] overflow-y-auto dark:bg-gray-800">
+            <h2 className="text-lg sm:text-xl font-bold mb-4 dark:text-gray-100">Edit Task</h2>
 
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-semibold block mb-1">Title</label>
+                <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Title</label>
                 <input
                   type="text"
-                  className="w-full border rounded-xl px-3 py-2"
+                  className="w-full border rounded-xl px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   placeholder="Title"
@@ -572,9 +609,9 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-1">Description</label>
+                <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Description</label>
                 <textarea
-                  className="w-full border rounded-xl px-3 py-2"
+                  className="w-full border rounded-xl px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder="Description"
@@ -583,11 +620,11 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-1">Status</label>
+                <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Status</label>
                 <select
                   value={editStatus}
                   onChange={(e) => setEditStatus(e.target.value as TaskStatus)}
-                  className="w-full border rounded-xl px-3 py-2"
+                  className="w-full border rounded-xl px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 >
                   <option value="Todo">Todo</option>
                   <option value="In Progress">In Progress</option>
@@ -597,13 +634,13 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-1">Category</label>
+                <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Category</label>
                 <select
                   value={editCategoryId === "" ? "" : Number(editCategoryId)}
                   onChange={(e) =>
                     setEditCategoryId(e.target.value === "" ? "" : Number(e.target.value))
                   }
-                  className="w-full border rounded-xl px-3 py-2"
+                  className="w-full border rounded-xl px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 >
                   <option value="">— Select category —</option>
                   {categories.map((c) => (
@@ -615,11 +652,11 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-1">Priority</label>
+                <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Priority</label>
                 <select
                   value={editPriority}
                   onChange={(e) => setEditPriority(e.target.value as TaskPriority)}
-                  className="w-full border rounded-xl px-3 py-2"
+                  className="w-full border rounded-xl px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
                 >
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
@@ -628,10 +665,10 @@ export default function TasksPage() {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-1">Due date</label>
+                <label className="text-sm font-semibold block mb-1 dark:text-gray-300">Due date</label>
                 <input
-                  type="date"
-                  className="w-full border rounded-xl px-3 py-2"
+                  type="datetime-local"
+                  className="w-full border rounded-xl px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:[color-scheme:dark]"
                   value={editDueDate}
                   onChange={(e) => setEditDueDate(e.target.value)}
                 />
@@ -640,7 +677,7 @@ export default function TasksPage() {
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
                 <button
                   onClick={closeEditModal}
-                  className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 order-2 sm:order-1"
+                  className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 order-2 sm:order-1 dark:bg-gray-600 dark:hover:bg-gray-500"
                 >
                   Cancel
                 </button>

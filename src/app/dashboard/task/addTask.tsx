@@ -1,12 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 import { z } from "zod";
-import { DayPicker, SelectSingleEventHandler } from "react-day-picker";
-import "react-day-picker/dist/style.css";
-import { format } from "date-fns";
 
 type TaskStatus = "Todo" | "In Progress" | "Done" | "pending";
 type TaskPriority = "Low" | "Medium" | "High";
@@ -27,7 +24,7 @@ const taskSchema = z.object({
   status: z.enum(["Todo", "In Progress", "Done", "pending"]),
   priority: z.enum(["Low", "Medium", "High"]),
   categoryId: z.string().optional(),
-  dueDate: z.date().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
 });
 
 type TaskFormSchema = z.infer<typeof taskSchema>;
@@ -35,44 +32,23 @@ type FormErrors = z.ZodFormattedError<TaskFormSchema>;
 
 export default function AddTask({ onTaskAdded }: AddTaskProps) {
   const { user } = useAuth();
-
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("Todo");
   const [categoryId, setCategoryId] = useState<string>("");
   const [priority, setPriority] = useState<TaskPriority>("Medium");
-  const [dueDate, setDueDate] = useState<Date | undefined>();
-
+  const [dueDate, setDueDate] = useState<string>("");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [errors, setErrors] = useState<FormErrors | null>(null);
-
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const calendarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        calendarRef.current &&
-        !calendarRef.current.contains(event.target as Node)
-      ) {
-        setIsCalendarOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [calendarRef]);
 
   const fetchCategories = async () => {
     setLoadingCategories(true);
@@ -103,13 +79,8 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
     setStatus("Todo");
     setCategoryId("");
     setPriority("Medium");
-    setDueDate(undefined);
+    setDueDate("");
     setErrors(null);
-  };
-
-  const handleDaySelect: SelectSingleEventHandler = (date) => {
-    setDueDate(date);
-    setIsCalendarOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,8 +118,8 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
         user_id: Number(user.userId),
         category_id: data.categoryId ? Number(data.categoryId) : 0,
         priority: data.priority,
-        due_date: data.dueDate ? data.dueDate.toISOString() : null,
-        completed_at: data.status === "Done" ? new Date().toISOString() : null,
+        due_date: data.dueDate ? new Date(data.dueDate + '+07:00').toISOString() : null,
+        completed_at: data.status === "Done" ? new Date(Date.now() + (7 * 60 * 60 * 1000)).toISOString() : null,
       };
 
       await api.post("/tasks", body);
@@ -196,10 +167,10 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
 
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-101 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl flex flex-col">
-            <div className="sticky top-0 bg-white rounded-t-xl border-b px-4 py-4 sm:px-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg sm:text-xl font-bold">Add New Task</h2>
+          <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl flex flex-col dark:bg-gray-800">
+            <div className="sticky top-0 bg-white rounded-t-xl border-b px-4 py-4 sm:px-6 dark:bg-gray-800">
+              <div className="flex justify-between items-center dark:bg-gray-800">
+                <h2 className="text-lg sm:text-xl font-bold dark:text-gray-100">Add New Task</h2>
                 <button
                   onClick={closeModal}
                   className="text-gray-500 hover:text-gray-700 p-1"
@@ -224,12 +195,12 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
 
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="text-sm font-semibold block mb-2">
+                <label className="text-sm font-semibold block mb-2 dark:text-gray-300">
                   Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  className={`w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:ring-1 ${
+                  className={`w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:ring-1 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 ${
                     errors?.title
                       ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                       : "focus:border-purple-600 focus:ring-purple-600"
@@ -247,11 +218,11 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-2">
+                <label className="text-sm font-semibold block mb-2 dark:text-gray-300">
                   Description
                 </label>
                 <textarea
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 resize-none"
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 resize-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400"
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -262,13 +233,13 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold block mb-2">
+                  <label className="text-sm font-semibold block mb-2 dark:text-gray-300">
                     Status
                   </label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                    className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
+                    className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400"
                     disabled={loading}
                   >
                     <option value="Todo">Todo</option>
@@ -279,7 +250,7 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold block mb-2">
+                  <label className="text-sm font-semibold block mb-2 dark:text-gray-300">
                     Priority
                   </label>
                   <select
@@ -287,7 +258,7 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
                     onChange={(e) =>
                       setPriority(e.target.value as TaskPriority)
                     }
-                    className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
+                    className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400"
                     disabled={loading}
                   >
                     <option value="Low">Low</option>
@@ -298,13 +269,13 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
               </div>
 
               <div>
-                <label className="text-sm font-semibold block mb-2">
+                <label className="text-sm font-semibold block mb-2 dark:text-gray-300">
                   Category
                 </label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600"
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400"
                   disabled={loading || loadingCategories}
                 >
                   <option value="">— Select category (optional) —</option>
@@ -324,48 +295,17 @@ export default function AddTask({ onTaskAdded }: AddTaskProps) {
                 )}
               </div>
 
-              <div className="relative">
-                <label className="text-sm font-semibold block mb-2">
+              <div>
+                <label className="text-sm font-semibold block mb-2 dark:text-gray-300">
                   Due Date
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                <input
+                  type="datetime-local"
+                  className="w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base outline-none focus:border-purple-600 focus:ring-1 focus:ring-purple-600 ark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:[color-scheme:dark]"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
                   disabled={loading}
-                  className={`w-full border rounded-xl px-3 py-2.5 text-sm sm:text-base text-left flex justify-between items-center outline-none focus:ring-1 focus:border-purple-600 focus:ring-purple-600`}
-                >
-                  <span className={dueDate ? "text-black" : "text-gray-400"}>
-                    {dueDate ? format(dueDate, "PPP") : "Select a date"}
-                  </span>
-                  <svg
-                    className="w-5 h-5 text-gray-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    ></path>
-                  </svg>
-                </button>
-
-                {isCalendarOpen && (
-                  <div
-                    ref={calendarRef}
-                    className="absolute z-20 mt-2 bg-white border rounded-lg shadow-lg"
-                  >
-                    <DayPicker
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={handleDaySelect}
-                      initialFocus
-                      disabled={{ before: new Date() }}
-                    />
-                  </div>
-                )}
+                />
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t mt-6">
