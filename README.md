@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Nama : Muhamad Fatah Rozaq
 
-## Getting Started
+Email : fatah.rozaq20@gmail.com
 
-First, run the development server:
+## Instalasi Proyek
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Setelah berhasil clone dari github, jalankan command
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. npm install
+2. cp .example.env.local .env.local
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Isikan env tersebut, dari serviceAccountKey.json dari firebase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Sebelum itu, aktifkan terlebih dahulu Firebase Auth pada proyek anda
 
-## Learn More
+Jika sudah mengaktifkan Firebase Auth, Lakukan step by step berikut untuk mendapatkan serviceAccountKey.json
 
-To learn more about Next.js, take a look at the following resources:
+- Masuk project pada firebase
+- Masuk ke project setting
+- Masuk ke tab service account
+- Pilih admin sdk node
+- Tekan tombol generate private key
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Setelah berhasil, akan terunduh file serviceAccountKey.json. Gunakan konfigurasi yang ada di file tersebut pada file .env.local 
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Jika sudah jalankan perintah "npm run dev"
