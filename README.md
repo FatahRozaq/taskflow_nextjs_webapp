@@ -1,3 +1,7 @@
+Nama : Muhamad Fatah Rozaq
+
+Email : fatah.rozaq20@gmail.com
+
 ## Instalasi Proyek
 
 Setelah berhasil clone dari github, jalankan command
